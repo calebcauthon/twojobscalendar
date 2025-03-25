@@ -30,16 +30,48 @@ async function listGists() {
             console.log('Found target gist:');
             console.log(`\nTitle: ${targetGist.description || 'No description'}`);
             console.log(`URL: ${targetGist.html_url}`);
-            console.log(`Created: ${new Date(targetGist.created_at).toLocaleDateString()}`);
-            console.log('Files:');
-            Object.keys(targetGist.files).forEach(file => {
-                console.log(`  - ${file}`);
+            
+            // Fetch the raw content of each file
+            const fileContents = await Promise.all(
+                Object.entries(targetGist.files)
+                    .filter(([filename]) => filename !== 'two_calendars.md')
+                    .map(async ([filename, fileInfo]) => {
+                        const rawUrl = fileInfo.raw_url;
+                        const response = await fetch(rawUrl);
+                        const content = await response.text();
+                        return `\n=== ${filename} ===\n${content}\n`;
+                    })
+            );
+
+            const combinedContent = fileContents.join('\n');
+
+            // Update the gist
+            const updateResponse = await fetch(`${GITHUB_API_URL}/${targetGist.id}`, {
+                method: 'PATCH',
+                headers: {
+                    'Authorization': `Bearer ${GITHUB_TOKEN}`,
+                    'Accept': 'application/vnd.github.v3+json',
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    files: {
+                        'two_calendars.md': {
+                            content: combinedContent
+                        }
+                    }
+                })
             });
+
+            if (!updateResponse.ok) {
+                throw new Error(`Failed to update gist: ${updateResponse.status}`);
+            }
+
+            console.log('\nSuccessfully updated two_calendars.md with combined content');
         } else {
             console.log('No gist found containing two_calendars.md');
         }
     } catch (error) {
-        console.error('Error fetching gists:', error.message);
+        console.error('Error:', error.message);
     }
 }
 
