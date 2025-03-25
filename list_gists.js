@@ -28,8 +28,16 @@ function extractSchedule(content) {
             hasTime: false,
             timeMatch: null,
             purpose: null,
-            included: false
+            included: false,
+            alreadyMarked: line.startsWith('✅')
         };
+
+        // Skip if already marked
+        if (debug.alreadyMarked) {
+            processedContent += `${line}\n`;
+            debugInfo.push(debug);
+            return;
+        }
 
         if (line.includes('@')) {
             const [purpose, timePart] = line.split('@');
