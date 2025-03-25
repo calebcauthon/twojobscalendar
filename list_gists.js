@@ -18,6 +18,7 @@ function extractSchedule(content) {
     const lines = content.split('\n');
     const scheduleEntries = [];
     const debugInfo = [];
+    let processedContent = '';
 
     lines.forEach((line, index) => {
         const debug = {
@@ -44,7 +45,13 @@ function extractSchedule(content) {
                     time: debug.timeMatch
                 });
                 debug.included = true;
+                // Add checkbox emoji to included lines
+                processedContent += `✅ ${line}\n`;
+            } else {
+                processedContent += `${line}\n`;
             }
+        } else {
+            processedContent += `${line}\n`;
         }
 
         debugInfo.push(debug);
@@ -52,7 +59,8 @@ function extractSchedule(content) {
 
     return {
         entries: scheduleEntries,
-        debug: debugInfo
+        debug: debugInfo,
+        processedContent: processedContent.trim()
     };
 }
 
@@ -88,7 +96,7 @@ async function listGists() {
                 files: Object.keys(targetGist.files)
             }));
             
-            // Fetch the raw content of each file
+            // Fetch and process each file
             const fileContents = await Promise.all(
                 Object.entries(targetGist.files)
                     .filter(([filename]) => filename !== 'two_calendars.md' && filename !== 'debugging.md')
@@ -96,32 +104,52 @@ async function listGists() {
                         const rawUrl = fileInfo.raw_url;
                         const response = await fetch(rawUrl);
                         const content = await response.text();
-                        debugLogs.push(logDebug(`Fetched content for ${filename}`, { 
-                            contentLength: content.length 
+                        
+                        // Process this file's content
+                        const { entries: scheduleEntries, debug: extractionDebug, processedContent } = extractSchedule(content);
+                        
+                        debugLogs.push(logDebug(`Processed ${filename}`, { 
+                            contentLength: content.length,
+                            includedEntries: scheduleEntries.length
                         }));
-                        return `\n=== ${filename} ===\n${content}\n`;
+
+                        return {
+                            filename,
+                            content: processedContent,
+                            entries: scheduleEntries
+                        };
                     })
             );
 
-            const combinedContent = fileContents.join('\n');
-            
-            // Extract schedule entries with debug info
-            const { entries: scheduleEntries, debug: extractionDebug } = extractSchedule(combinedContent);
-            debugLogs.push(logDebug('Schedule extraction results', { 
-                totalLines: extractionDebug.length,
-                includedEntries: scheduleEntries.length,
-                lineByLineDebug: extractionDebug
-            }));
-            
-            // Create schedule section
-            const scheduleSection = scheduleEntries.length > 0 
-                ? `\n## Schedule\n\n${scheduleEntries.map(entry => `- ${entry.purpose} @ ${entry.time}`).join('\n')}\n`
+            // Create schedule section from all entries
+            const allEntries = fileContents.flatMap(file => file.entries);
+            const scheduleSection = allEntries.length > 0 
+                ? `\n## Schedule\n\n${allEntries.map(entry => `- ${entry.purpose} @ ${entry.time}`).join('\n')}\n`
                 : '\n## Schedule\n\nNo schedule entries found.\n';
 
-            // Combine everything for the main content
-            const finalContent = combinedContent + scheduleSection;
+            // Prepare combined content for two_calendars.md
+            const combinedContent = fileContents
+                .map(file => `\n=== ${file.filename} ===\n${file.content}\n`)
+                .join('\n');
 
-            // Update the gist with separate files
+            // Prepare files object for the update
+            const files = {
+                'two_calendars.md': {
+                    content: combinedContent + scheduleSection
+                },
+                'debugging.md': {
+                    content: '# Debug Logs\n\n' + debugLogs.join('\n')
+                }
+            };
+
+            // Add processed files with checkmarks
+            fileContents.forEach(file => {
+                files[file.filename] = {
+                    content: file.content
+                };
+            });
+
+            // Update all files in one request
             const updateResponse = await fetch(`${GITHUB_API_URL}/${targetGist.id}`, {
                 method: 'PATCH',
                 headers: {
@@ -129,33 +157,40 @@ async function listGists() {
                     'Accept': 'application/vnd.github.v3+json',
                     'Content-Type': 'application/json'
                 },
-                body: JSON.stringify({
-                    files: {
-                        'two_calendars.md': {
-                            content: finalContent
-                        },
-                        'debugging.md': {
-                            content: '# Debug Logs\n\n' + debugLogs.join('\n')
-                        }
-                    }
-                })
+                body: JSON.stringify({ files })
             });
 
             if (!updateResponse.ok) {
-                throw new Error(`Failed to update gist: ${updateResponse.status}`);
+                const errorBody = await updateResponse.text();
+                throw new Error(`Failed to update gist:
+                    Status: ${updateResponse.status}
+                    URL: ${GITHUB_API_URL}/${targetGist.id}
+                    Response: ${errorBody}`);
             }
 
-            console.log('✨ Successfully updated gist with content and debug logs!');
-            debugLogs.push(logDebug('Successfully updated gist'));
+            console.log('✨ Successfully updated all files with checkmarks and schedule!');
+            debugLogs.push(logDebug('Successfully updated all files'));
         } else {
             console.log('❌ No gist found containing two_calendars.md');
             debugLogs.push(logDebug('No target gist found'));
         }
     } catch (error) {
         console.error('💥 Error:', error.message);
+        if (error.response) {
+            console.error('Response details:', {
+                status: error.response.status,
+                statusText: error.response.statusText,
+                headers: error.response.headers
+            });
+        }
         debugLogs.push(logDebug('Error occurred', { 
             message: error.message,
-            stack: error.stack 
+            stack: error.stack,
+            response: error.response ? {
+                status: error.response.status,
+                statusText: error.response.statusText,
+                headers: error.response.headers
+            } : null
         }));
     }
 }
