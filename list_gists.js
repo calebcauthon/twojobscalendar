@@ -32,8 +32,20 @@ function extractSchedule(content) {
             alreadyMarked: line.startsWith('✅')
         };
 
-        // Skip if already marked
+        // If already marked, extract the line without the checkmark
         if (debug.alreadyMarked) {
+            const lineWithoutCheckmark = line.substring(2).trim();
+            if (lineWithoutCheckmark.includes('@')) {
+                const [purpose, timePart] = lineWithoutCheckmark.split('@');
+                const timeMatch = timePart.match(/(\d{1,2}:\d{2}(?:am|pm))/);
+                if (timeMatch) {
+                    scheduleEntries.push({
+                        purpose: purpose.trim(),
+                        time: timeMatch[0]
+                    });
+                    debug.included = true;
+                }
+            }
             processedContent += `${line}\n`;
             debugInfo.push(debug);
             return;
@@ -130,9 +142,14 @@ async function listGists() {
             );
 
             // Create schedule section from all entries
-            const allEntries = fileContents.flatMap(file => file.entries);
+            const allEntries = fileContents.flatMap(file => 
+                file.entries.map(entry => ({
+                    ...entry,
+                    source: file.filename.replace('.md', '')
+                }))
+            );
             const scheduleSection = allEntries.length > 0 
-                ? `\n## Schedule\n\n${allEntries.map(entry => `- ${entry.purpose} @ ${entry.time}`).join('\n')}\n`
+                ? `\n## Schedule\n\n${allEntries.map(entry => `- [${entry.source}] ${entry.purpose} @ ${entry.time}`).join('\n')}\n`
                 : '\n## Schedule\n\nNo schedule entries found.\n';
 
             // Prepare combined content for two_calendars.md
