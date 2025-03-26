@@ -152,10 +152,43 @@ async function listGists() {
                     source: file.filename.replace('.md', '')
                 }))
             );
+
+            // Group entries by date
+            const groupedEntries = allEntries.reduce((groups, entry) => {
+                const date = entry.date || 'No Date';
+                if (!groups[date]) {
+                    groups[date] = [];
+                }
+                groups[date].push(entry);
+                return groups;
+            }, {});
+
+            // Sort dates chronologically
+            const sortedDates = Object.keys(groupedEntries).sort((a, b) => {
+                if (a === 'No Date') return 1;  // Put unscheduled at the end
+                if (b === 'No Date') return -1;
+                
+                // Convert date strings to comparable format (e.g., "mon 3-25" -> "3-25")
+                const getDateValue = (dateStr) => {
+                    const [weekday, monthDay] = dateStr.split(' ');
+                    const [monthNum, dayNum] = monthDay.split('-');
+                    return parseInt(monthNum) * 100 + parseInt(dayNum);
+                };
+                
+                return getDateValue(a) - getDateValue(b);
+            });
+
+            // Create schedule section with grouped entries
             const scheduleSection = allEntries.length > 0 
-                ? `\n## Schedule\n\n${allEntries.map(entry => 
-                    `- [${entry.source}] ${entry.purpose} @ ${entry.time}${entry.date ? ` on ${entry.date}` : ''}`
-                ).join('\n')}\n`
+                ? `\n## Schedule\n\n${sortedDates
+                    .map(date => {
+                        const entries = groupedEntries[date];
+                        const dateHeader = date === 'No Date' ? 'Unscheduled' : date;
+                        return `### ${dateHeader}\n\n${entries.map(entry => 
+                            `- [${entry.source}] ${entry.purpose} @ ${entry.time}`
+                        ).join('\n')}\n`;
+                    })
+                    .join('\n')}\n`
                 : '\n## Schedule\n\nNo schedule entries found.\n';
 
             // Prepare combined content for two_calendars.md
