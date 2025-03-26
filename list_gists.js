@@ -38,10 +38,12 @@ function extractSchedule(content) {
             if (lineWithoutCheckmark.includes('@')) {
                 const [purpose, timePart] = lineWithoutCheckmark.split('@');
                 const timeMatch = timePart.match(/(\d{1,2}:\d{2}(?:am|pm))/);
+                const dateMatch = timePart.match(/on\s+(\w+)\s+(\d{1,2}-\d{1,2})/i);
                 if (timeMatch) {
                     scheduleEntries.push({
                         purpose: purpose.trim(),
-                        time: timeMatch[0]
+                        time: timeMatch[0],
+                        date: dateMatch ? `${dateMatch[1]} ${dateMatch[2]}` : null
                     });
                     debug.included = true;
                 }
@@ -57,12 +59,14 @@ function extractSchedule(content) {
             
             // Check for time pattern
             const timeMatch = timePart.match(/(\d{1,2}:\d{2}(?:am|pm))/);
+            const dateMatch = timePart.match(/on\s+(\w+)\s+(\d{1,2}-\d{1,2})/i);
             if (timeMatch) {
                 debug.hasTime = true;
                 debug.timeMatch = timeMatch[0];
                 scheduleEntries.push({
                     purpose: debug.purpose,
-                    time: debug.timeMatch
+                    time: debug.timeMatch,
+                    date: dateMatch ? `${dateMatch[1]} ${dateMatch[2]}` : null
                 });
                 debug.included = true;
                 // Add checkbox emoji to included lines
@@ -149,7 +153,9 @@ async function listGists() {
                 }))
             );
             const scheduleSection = allEntries.length > 0 
-                ? `\n## Schedule\n\n${allEntries.map(entry => `- [${entry.source}] ${entry.purpose} @ ${entry.time}`).join('\n')}\n`
+                ? `\n## Schedule\n\n${allEntries.map(entry => 
+                    `- [${entry.source}] ${entry.purpose} @ ${entry.time}${entry.date ? ` on ${entry.date}` : ''}`
+                ).join('\n')}\n`
                 : '\n## Schedule\n\nNo schedule entries found.\n';
 
             // Prepare combined content for two_calendars.md
