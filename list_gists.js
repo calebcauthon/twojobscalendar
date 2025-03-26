@@ -185,7 +185,7 @@ async function listGists() {
                         const entries = groupedEntries[date];
                         const dateHeader = date === 'No Date' ? 'Unscheduled' : date;
                         return `### ${dateHeader}\n\n${entries.map(entry => 
-                            `- [${entry.source}] ${entry.purpose} @ ${entry.time}`
+                            `- <span style="color: purple">[${entry.source}]</span> ${entry.purpose} @ ${entry.time}`
                         ).join('\n')}\n`;
                     })
                     .join('\n')}\n`
@@ -199,7 +199,7 @@ async function listGists() {
             // Prepare files object for the update
             const files = {
                 'two_calendars.md': {
-                    content: combinedContent + scheduleSection
+                    content: scheduleSection
                 },
                 'debugging.md': {
                     content: '# Debug Logs\n\n' + debugLogs.join('\n')
