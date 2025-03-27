@@ -1,6 +1,9 @@
 const fetch = require('node-fetch');
 
-const GITHUB_TOKEN = process.env.GITHUB_TOKEN;
+const GITHUB_TOKEN = typeof process !== 'undefined' && process.env?.GITHUB_TOKEN
+  ? process.env.GITHUB_TOKEN
+  : env.GITHUB_TOKEN;
+
 if (!GITHUB_TOKEN) {
     throw new Error('GITHUB_TOKEN is not set in the environment variables.');
 }
