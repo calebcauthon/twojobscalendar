@@ -102,9 +102,11 @@ export default {
       }
 
       // Log request details
+      const headersWithoutToken = { ...headers };
+      delete headersWithoutToken['Authorization'];
       debugLogs.push(logDebug('Making request to GitHub API', {
         url: GITHUB_API_URL,
-        headers: headers
+        headers: headersWithoutToken
       }));
 
       const response = await fetch(GITHUB_API_URL, {
