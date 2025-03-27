@@ -4,6 +4,7 @@
   "description": "Script to list GitHub gists",
   "main": "list_gists.js",
   "dependencies": {
-    "node-fetch": "^2.7.0"
+    "node-fetch": "^2.7.0",
+    "wrangler": "^4.5.1"
   }
 }
