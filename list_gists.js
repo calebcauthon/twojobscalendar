@@ -178,11 +178,33 @@ async function listGists() {
                 return getDateValue(a) - getDateValue(b);
             });
 
+            // Sort entries by time within each day
+            const sortEntriesByTime = (entries) => {
+                return entries.sort((a, b) => {
+                    const getTimeValue = (timeStr) => {
+                        const match = timeStr.match(/(\d+):(\d+)(am|pm)/);
+                        let hours = parseInt(match[1]);
+                        const minutes = parseInt(match[2]);
+                        const isPM = match[3] === 'pm';
+                        
+                        // Convert to 24-hour format
+                        if (hours === 12) {
+                            hours = isPM ? 12 : 0;  // 12am = 0, 12pm = 12
+                        } else if (isPM) {
+                            hours += 12;
+                        }
+                        
+                        return hours * 60 + minutes;
+                    };
+                    return getTimeValue(a.time) - getTimeValue(b.time);
+                });
+            };
+
             // Create schedule section with grouped entries
             const scheduleSection = allEntries.length > 0 
                 ? `\n## Schedule\n\n${sortedDates
                     .map(date => {
-                        const entries = groupedEntries[date];
+                        const entries = sortEntriesByTime(groupedEntries[date]);
                         const dateHeader = date === 'No Date' ? 'Unscheduled' : date;
                         return `### ${dateHeader}\n\n${entries.map(entry => 
                             `- <span style="color: purple">[${entry.source}]</span> ${entry.purpose} @ ${entry.time}`
