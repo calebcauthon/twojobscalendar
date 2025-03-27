@@ -50,3 +50,16 @@ The final schedule will show entries in this format:
 - Shows source file for each entry
 - Creates a unified schedule section
 - Preserves existing checkmarks 
+
+## Testing
+Run the automated tests using Node.js:
+```bash
+node test.js
+```
+
+The test suite verifies:
+- Basic AM/PM time sorting
+- Same hour different minutes sorting
+- Single digit hours sorting
+- Midnight and noon handling
+- Edge cases with 12-hour format 
