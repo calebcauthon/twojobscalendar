@@ -63,3 +63,30 @@ The test suite verifies:
 - Single digit hours sorting
 - Midnight and noon handling
 - Edge cases with 12-hour format 
+
+## Local Development
+Run the project locally using Wrangler:
+```bash
+wrangler dev
+```
+This starts a local development server with hot reloading. Access your app at `http://localhost:8787`.
+
+## Deployment with Wrangler
+This project uses Cloudflare Workers for deployment. To deploy:
+
+1. Install Wrangler CLI:
+```bash
+npm install -g wrangler
+```
+
+2. Login to Cloudflare:
+```bash
+wrangler login
+```
+
+3. Deploy:
+```bash
+wrangler deploy
+```
+
+The worker will be deployed to your Cloudflare account and accessible via the provided URL. 
